@@ -28,10 +28,16 @@ typedef struct map {
     void **entries;
 } map_t;
 
-void map_rehash(void **old_entries, size_t old_size, void **new_entries, size_t new_size) {
-    for (size_t i = 0; i < old_size; i++) {
-        if (old_entries[old_size] != NULL) {
+int _object_insert(map_t *map, void **entries, size_t cap, void *unit);
 
+void map_rehash(map_t *map, void **entries, size_t new_cap)
+{
+    for (size_t i = 0; i < map->cap; i++)
+    {
+
+        if (map->entries[i] != NULL)
+        {
+            _object_insert(map, entries, new_cap, map->entries[i]);
         }
     }
 }
@@ -39,32 +45,38 @@ void map_rehash(void **old_entries, size_t old_size, void **new_entries, size_t 
 int map_realloc(map_t *map)
 {
     size_t newSize = 0;
-    if (map->count >= (size_t)(map->cap * DEFAULT_LOAD_FACTOR)) {
-        newSize = (size_t) (map->cap * (double)(1 + DEFAULT_LOAD_FACTOR));
-    } else {
-        return -1;
+
+    if (map->count < (size_t)((map->cap * (1 - DEFAULT_LOAD_FACTOR)) * DEFAULT_LOAD_FACTOR))
+    {
+        newSize = (size_t)(map->cap * (double)(DEFAULT_LOAD_FACTOR));
     }
-    printf("1 New Size: %zu\n", newSize);
-    newSize = GetHigher3mod4Prime(newSize);
+    else if (map->count >= (size_t)((double)map->cap * DEFAULT_LOAD_FACTOR))
+    {
+        newSize = (size_t)(map->cap * (double)(1 + DEFAULT_LOAD_FACTOR));
+    }
 
-    if (newSize > map->cap) {
-        void *tmp = calloc(newSize, map->usize);
-        if (tmp == NULL) {
-            return -1;
-        }
-
-       
-
-        printf("2 NewSize: %dn", newSize);
+    if (newSize == 0)
+    {
         return 0;
     }
 
-        printf("3 NewSize: %s\n");
+    newSize = GetHigher3mod4Prime(newSize);
 
+    void *tmp = calloc(newSize, map->usize);
+    if (tmp == NULL)
+    {
+        return -1;
+    }
 
+    // rehash, overwrite with new map->cap, free old entries, overwrite map entries pointer
+    map_rehash(map, tmp, newSize);
+    map->cap = newSize;
+    free(map->entries);
+    map->entries = tmp;
 
-    return -2;
+    return 0;
 }
+
 map_t *map_create(size_t unitSize, bool (*compare_cb)(const void *, const void *, void *udata),
                   uint64_t (*hash_cb)(const void *, void *udata))
 {
@@ -102,13 +114,19 @@ void* map_get(map_t *map, void *unit)
 
         size_t table_index = hash_get_index(hash, i, map->cap);
 
+        // printf("%zu\n", table_index);
+
         void **entry = &map->entries[table_index];
 
         if (NULL == *entry) {
-            return NULL;
+            continue;
         } else {
             if (map->compare_cb(unit, *entry, NULL) == true) {
                 return *entry;
+            }
+            else
+            {
+                continue;
             }
         }
 
@@ -117,23 +135,24 @@ void* map_get(map_t *map, void *unit)
     return NULL;
 }
 
-int _map_set(uint64_t hash, void **entries, size_t cap, void *unit, bool (*compare_cb)(const void *, const void *, void *udata), size_t *count) {
-    for (size_t i = 0; i < cap; i++) {
-        size_t table_index = hash_get_index(hash, i, cap);
+int _object_insert(map_t *map, void **entries, size_t cap, void *unit)
+{
+    size_t table_index = 0;
+    uint64_t hash = map->hash_cb(unit, NULL);
 
-        void **entry = &entries[table_index];
+    for (size_t i = 0; i < cap; i++)
+    {
+        table_index = hash_get_index(hash, i, cap);
 
-        if (NULL == *entry) {
-            *entry = unit;
-            *count++;
-            return 0;
-        } else {
-            /** comparison between found entry and value */
-            if (compare_cb(unit, *entry, NULL) == true) {
-                *entry = unit;
-                *count++;
-                return 0;
-            }
+        if (entries[table_index] == NULL)
+        {
+            entries[table_index] = unit;
+            return table_index;
+        }
+
+        if (map->compare_cb(entries[table_index], unit, NULL) == true)
+        {
+            continue;
         }
     }
 
@@ -143,56 +162,52 @@ int _map_set(uint64_t hash, void **entries, size_t cap, void *unit, bool (*compa
 int map_set(map_t *map, void *unit)
 {
     uint64_t hash = map->hash_cb(unit, NULL);
-    int ret = _map_set(hash, map->entries, map->cap, unit, map->compare_cb, &map->count) + 1;
-    if (ret == -1) {
-        printf("got -1\n");
+
+    size_t index = -1;
+
+    if ((index = _object_insert(map, map->entries, map->cap, unit)) == -1)
+    {
+        fprintf(stderr, "error: failed to insert object\n");
         return -1;
     }
-
-    printf("got %d\n", ret);
-    map->count = (size_t) ret;
+    // printf("index: %zu\n", index);
+    map->count++;
+    map_realloc(map);
 
     return 0;
-
-    // for (size_t i = 0; i < map->cap; i++) {
-    //     size_t table_index = hash_get_index(hash, i, map->cap);
-
-    //     void **entry = &map->entries[table_index];
-
-    //     if (NULL == *entry) {
-    //         *entry = unit;
-    //         map->count++;
-    //         return 0;
-    //     } else {
-    //         /** comparison between found entry and value */
-    //         if (map->compare_cb(unit, *entry, NULL) == true) {
-    //             *entry = unit;
-    //             map->count++;
-    //             return 0;
-    //         }
-    //     }
-    // }
 }
 
 void *map_remove(map_t *map, void *unit)
 {
+    // printf("unit: %p\n", unit);
     uint64_t hash = map->hash_cb(unit, NULL);
     void *removed_unit = NULL;
 
-    for (size_t i = 0; i < map->cap; i++) {
+    if (unit == NULL)
+    {
+        return NULL;
+    }
+
+    for (size_t i = 0; i < map->cap; i++)
+    {
         size_t table_index = hash_get_index(hash, i, map->cap);
 
         void **entry = &map->entries[table_index];
 
-        if (NULL == *entry) {
-            *entry = unit;
-            return NULL;
-        } else {
+        if (NULL == *entry)
+        {
+            continue;
+        }
+        else
+        {
             /** comparison between found entry and value */
-            if (map->compare_cb(unit, *entry, NULL) == true) {
+            if (map->compare_cb(unit, *entry, NULL) == true)
+            {
                 removed_unit = *entry;
                 *entry = NULL;
                 map->count--;
+                map_realloc(map);
+                // printf("Found and remove!\n");
                 return removed_unit;
             }
         }
@@ -204,11 +219,19 @@ void map_scan(map_t *map, bool (*iter_cb)(const void *, void *))
 {
     for (size_t i = 0; i < map->cap; i++) {
         if (map->entries[i] != NULL)
+        {
+            // printf("%zu:", i);
             iter_cb(map->entries[i], NULL);
+        }
     }
 }
 
 int map_count(map_t *map)
 {
     return map->count;
+}
+
+size_t map_cap(map_t *map)
+{
+    return map->cap;
 }

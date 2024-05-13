@@ -23,6 +23,7 @@ void *map_set(map_t *map, void *unit);
 int map_remove(map_t *map, void *unit);
 
 void map_scan(map_t *map, bool (*iter_cb)(const void *, void *));
-int map_count(map_t *map);
+size_t map_count(map_t *map);
+size_t map_cap(map_t *map);
 
 #endif
