@@ -18,11 +18,11 @@ map_t *map_create(size_t unitSize, bool (*compare_cb)(const void *, const void *
 
 void map_destroy(map_t *map);
 
-void* map_get(map_t *map, void *unit);
+void *map_get(map_t *map, void *unit);
 void *map_set(map_t *map, void *unit);
-int map_remove(map_t *map, void *unit);
+void *map_remove(map_t *map, void *unit);
 
-void map_scan(map_t *map, bool (*iter_cb)(const void *, void *));
+void map_scan(map_t *map, bool (*iter_cb)(const void *, void *), void *udata);
 size_t map_count(map_t *map);
 size_t map_cap(map_t *map);
 

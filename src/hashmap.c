@@ -62,6 +62,11 @@ int map_realloc(map_t *map)
 
     newSize = GetHigher3mod4Prime(newSize);
 
+    if (newSize < DEFAULT_HASH_CAPACITY)
+    {
+        newSize = DEFAULT_HASH_CAPACITY;
+    }
+
     void *tmp = calloc(newSize, map->usize);
     if (tmp == NULL)
     {
@@ -152,7 +157,8 @@ int _object_insert(map_t *map, void **entries, size_t cap, void *unit)
 
         if (map->compare_cb(entries[table_index], unit, NULL) == true)
         {
-            continue;
+            entries[table_index] = unit;
+            return table_index;
         }
     }
 
@@ -210,18 +216,22 @@ void *map_remove(map_t *map, void *unit)
                 // printf("Found and remove!\n");
                 return removed_unit;
             }
+            else
+            {
+                continue;
+            }
         }
     }
     return NULL;
 }
 
-void map_scan(map_t *map, bool (*iter_cb)(const void *, void *))
+void map_scan(map_t *map, bool (*iter_cb)(const void *, const void *, void *), void *udata)
 {
     for (size_t i = 0; i < map->cap; i++) {
         if (map->entries[i] != NULL)
         {
-            // printf("%zu:", i);
-            iter_cb(map->entries[i], NULL);
+            // printf("in scan: %zu = %p\n", i, &i);
+            iter_cb(map->entries[i], udata, NULL);
         }
     }
 }

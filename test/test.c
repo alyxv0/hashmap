@@ -19,16 +19,18 @@ bool user_compare(const void *a, const void *b, void *udata)
 {
     const user_t *ua = a;
     const user_t *ub = b;
-    if (strcmp(ua->name, ub->name) == 0) {
+    if (strcmp(ua->name, ub->name) == 0)
+    {
         return true;
     }
+
     return false;
 }
 
 bool user_iter(const void *item, void *udata)
 {
     const user_t *user = item;
-    printf("%s (age: %d)\n", user->name, user->age);
+    printf("%p: %s (age: %d)\n", user, user->name, user->age);
     return true;
 }
 
@@ -41,13 +43,25 @@ uint64_t user_hash(const void *item)
 
     const user_t *user = item;
     uint64_t hash = fnv1a_hash(NULL, user->name, strlen(user->name));
-    hash = fnv1a_hash(&hash, &user->age, sizeof(user->age));
     return hash;
 }
 
 int range(int min, int max)
 {
     return (rand() % (max + 1 - min) + min);
+}
+
+bool use_test_remove_iter(const void *item, void *udata)
+{
+    map_t *map = udata;
+    const user_t *u = item;
+
+    printf("remove user: %s\n", u->name);
+    user_t *rem = map_remove(map, (void *)u);
+    if (rem == NULL)
+        abort();
+
+    return true;
 }
 
 void user_test(int user_count)
@@ -85,6 +99,7 @@ void user_test(int user_count)
     for (size_t i = 0; i < user_count; i++)
     {
         map_set(map, &user[i]);
+        printf("name: %s\n", user[i].name);
     }
     timer_stop();
     printf("Set Time: %.2fs\n", (double)(timer_time() / CLOCKS_PER_SEC));
@@ -94,25 +109,44 @@ void user_test(int user_count)
 
     timer_start();
     user_t *u = map_get(map, &user[r]);
+    printf("Get for index [%d]User: %s\n", r, u->name);
     timer_stop();
-    printf("Get One Time: %.2lfms\n", timer_time() / 1000);
+    printf("Get 1 User: %.2lfms\n", timer_time() / 1000);
 
     timer_start();
-    for (size_t i = 0; i < 10; i++)
+    for (size_t i = 0; i < user_count; i++)
     {
-        r = range(0, user_count);
-        u = map_get(map, &user[r]);
-        printf("Get for index [%d]User: %s\n", r, u->name);
+        u = map_get(map, &user[i]);
+        printf("Get for index [%d]User: %s\n", i, u->name);
     }
     timer_stop();
-    printf("Get 10 Time: %.2lfms\n", timer_time() / 1000);
+    printf("Get %d Users: %.2lfms\n", user_count, timer_time() / 1000);
+
+    printf("User0: %p\n", map_get(map, &(user_t){.name = "User0", .age = 0}));
+    printf("Entries: %zu/%zu\n", map_count(map), map_cap(map));
+
+    timer_start();
+    printf("User0: %p\n", map_get(map, &(user_t){.name = "User0", .age = 0}));
+    map_scan(map, use_test_remove_iter, map);
+    timer_stop();
+    printf("Remove all: %.2lfms\n", timer_time() / 1000);
 
     printf("Entries: %zu/%zu\n", map_count(map), map_cap(map));
+
+    printf("User0: %p\n", map_get(map, &(user_t){.name = "User0", .age = 0}));
+    map_scan(map, use_test_remove_iter, map);
+
+    map_remove(map, &(user_t){.name = "User11", .age = 11});
+
+    map_scan(map, user_iter, NULL);
+
+    printf("Count: %zu\n", map_count(map));
+    printf("Cap: %zu\n", map_cap(map));
 }
 
 int main(void)
 {
 
-    user_test(1024 * 1024 * 40);
+    user_test(1024 * 100);
     return 0;
 }
