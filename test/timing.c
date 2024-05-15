@@ -33,7 +33,7 @@ const char *time_postfix[] = {
 
 char buffer[20] = { 0 };
 
-const char *time_print(void) {
+const char *timer_print(void) {
     double t = (double)(g_timer.end - g_timer.start);
     double x = t / 1000;
     int ctr = 0;
@@ -42,6 +42,7 @@ const char *time_print(void) {
         t = t / 1000.0;
         ctr++;
     }
+
     snprintf(buffer, sizeof(buffer), "%.2lf%s", t, time_postfix[ctr]);
 
     return (const char *) buffer;

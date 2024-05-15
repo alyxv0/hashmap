@@ -5,10 +5,11 @@
 #include <stdbool.h>
 #include <inttypes.h>
 
-
+#include <pthread.h>
 
 typedef struct bucket {
-
+    pthread_mutex_t lock;
+    void *entry;
 } bucket_t;
 
 /**
@@ -28,7 +29,7 @@ typedef struct map
     /** number of entries */
     size_t count;
     /** array of pointers that hold the data */
-    void **entries;
+    bucket_t **buckets;
 
 }  map_t;
 

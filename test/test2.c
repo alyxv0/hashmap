@@ -17,7 +17,7 @@ bool fi_compare(const void *a, const void *b, void *udata)
     const function_info_t *fia = a;
     const function_info_t *fib = b;
 
-    if (strcmp(fia->str, fib->str) == 0) {
+    if (fia->func == fib->func) {
         return true;
     }
 
@@ -27,7 +27,7 @@ bool fi_compare(const void *a, const void *b, void *udata)
 bool fi_iter(const void *item, void *udata)
 {
     const function_info_t *fi = item;
-    printf("Function: %p - %s", fi->func, fi->str);
+    printf("Object: %p, Function: %p - %s\n", fi, fi == NULL ? NULL : fi->func, fi == NULL ? NULL : fi->str);
 }
 
 uint64_t fi_hash(const void *item)
@@ -50,15 +50,28 @@ void test_function(void)
 void fi_test()
 {
 
+    timer_start();
     map_t *map = map_create(sizeof(function_info_t), fi_compare, fi_hash);
+    timer_stop();
     if (map == NULL) {
         return;
     }
+    printf("Map-Create: %s\n", timer_print());
 
+    timer_start();
     map_set(map, &(function_info_t){.func = test_function, .str = "test_function()"});
+    map_set(map, &(function_info_t){.func = test_function, .str = "test_function()"});
+    map_set(map, &(function_info_t){.func = test_function, .str = "test_function()"});
+    map_set(map, &(function_info_t){.func = test_function, .str = "test_function()"});
+    map_set(map, &(function_info_t){.func = test_function, .str = "test_function()"});
+    timer_stop();
+    printf("Map-Set(5): %s\n", timer_print());
 
+    
+    timer_start();
     function_info_t *fi =  map_get(map, &(function_info_t){.func = test_function, .str = "test_function()"});
-
+    timer_stop();
+    printf("Map-Get(1): %s\n", timer_print());
 
 
     map_foreach(map, fi_iter, NULL);
