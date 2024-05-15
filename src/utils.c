@@ -2,7 +2,14 @@
 
 #include <limits.h>
 
-
+/**
+ * @brief returns index based on hash and, step (i) and the capacity
+ * 
+ * @param hash 
+ * @param i 
+ * @param cap 
+ * @return size_t 
+ */
 size_t hash_get_index(uint64_t hash, size_t i, size_t cap)
 {
     if(i & 1) { // odd
@@ -14,7 +21,13 @@ size_t hash_get_index(uint64_t hash, size_t i, size_t cap)
 
 
 /* Definition of prime number functions */
-
+/**
+ * @brief checks if number is prime
+ * 
+ * @param n 
+ * @return true 
+ * @return false 
+ */
 bool IsPrime(size_t n)
 {
     // (n & 1) checks if number is odd
@@ -28,10 +41,13 @@ bool IsPrime(size_t n)
     }
     return (n == 2);
 }
+
+
 /**
- * @brief Get the Next 3 mod 4 Prime number
+ * @brief Get the Next 3mod 4 Prime 
  * 
- * @param direction direction to go to
+ * @param n number
+ * @param direction higher or lower (HIGHER_PRIME, LOWER_PRIME)
  * @return size_t 
  */
 size_t GetNext3mod4Prime(size_t n, int direction)
@@ -44,10 +60,22 @@ size_t GetNext3mod4Prime(size_t n, int direction)
     return n;
 }
 
+/**
+ * @brief HigherPrime Wrapper for GetNext3mod4Prime()
+ * 
+ * @param n 
+ * @return size_t 
+ */
 size_t GetHigher3mod4Prime(size_t n) {
     return GetNext3mod4Prime(n, HIGHER_PRIME);
 }
 
+/**
+ * @brief LowerPrime Wrapper for GetNext3mod4Prime()
+ * 
+ * @param n 
+ * @return size_t 
+ */
 size_t GetLower3mod4Prime(size_t n) {
     return GetNext3mod4Prime(n, LOWER_PRIME);
 }

@@ -11,7 +11,7 @@
 #include "timing.h"
 
 typedef struct user {
-    char name[40];
+    char name[60];
     int age;
 } user_t;
 
@@ -56,7 +56,7 @@ bool use_test_remove_iter(const void *item, void *udata)
     map_t *map = udata;
     const user_t *u = item;
 
-    printf("remove user: %s\n", u->name);
+    // printf("remove user: %s\n", u->name);
     user_t *rem = map_remove(map, (void *)u);
     if (rem == NULL)
         abort();
@@ -81,8 +81,7 @@ void user_test(int user_count)
     }
 
     timer_start();
-    for (size_t i = 0; i < user_count; i++)
-    {
+    for (size_t i = 0; i < user_count; i++) {
         int ret = snprintf(user[i].name, sizeof(user[i].name), "User%zu", i);
         if (ret < 0)
         {
@@ -93,60 +92,75 @@ void user_test(int user_count)
         // printf("i: %zu, name: %s\n", i, user[i].name);
     }
     timer_stop();
-    printf("Create Users Time: %.2fs\n", (double)(timer_time() / CLOCKS_PER_SEC));
+    printf("Create Users Time: %s\n", time_print());
 
     timer_start();
-    for (size_t i = 0; i < user_count; i++)
-    {
+    for (size_t i = 0; i < user_count; i++) {
         map_set(map, &user[i]);
-        printf("name: %s\n", user[i].name);
     }
     timer_stop();
-    printf("Set Time: %.2fs\n", (double)(timer_time() / CLOCKS_PER_SEC));
+    printf("Set Time: %s\n", time_print());
 
     srand(10);
     int r = range(0, user_count);
 
     timer_start();
     user_t *u = map_get(map, &user[r]);
-    printf("Get for index [%d]User: %s\n", r, u->name);
     timer_stop();
-    printf("Get 1 User: %.2lfms\n", timer_time() / 1000);
+    printf("Get User: %s - %s\n", u->name, time_print());
 
     timer_start();
-    for (size_t i = 0; i < user_count; i++)
-    {
+    for (size_t i = 0; i < user_count; i++) {
         u = map_get(map, &user[i]);
-        printf("Get for index [%d]User: %s\n", i, u->name);
+        // printf("Get for index [%d]User: %s\n", i, u->name);
     }
     timer_stop();
-    printf("Get %d Users: %.2lfms\n", user_count, timer_time() / 1000);
+    printf("Get %d Users: %s\n", user_count, time_print());
 
-    printf("User0: %p\n", map_get(map, &(user_t){.name = "User0", .age = 0}));
     printf("Entries: %zu/%zu\n", map_count(map), map_cap(map));
+
+
 
     timer_start();
-    printf("User0: %p\n", map_get(map, &(user_t){.name = "User0", .age = 0}));
-    map_scan(map, use_test_remove_iter, map);
+    void *tmp = map_get(map, &(user_t){.name = "User0", .age = 0});
     timer_stop();
-    printf("Remove all: %.2lfms\n", timer_time() / 1000);
+    printf("Get User: %s - %s\n",((user_t*)tmp)->name, time_print());
+    
+    timer_start();
+    tmp = map_get(map, &(user_t){.name = "User25263", .age = 25263});
+    timer_stop();
+    printf("Get User: %s - %s\n", ((user_t*)tmp)->name, time_print());
 
+
+    timer_start();
+    map_foreach(map, use_test_remove_iter, map);
+    timer_stop();
+    printf("Remove all: %s\n", time_print());
     printf("Entries: %zu/%zu\n", map_count(map), map_cap(map));
 
-    printf("User0: %p\n", map_get(map, &(user_t){.name = "User0", .age = 0}));
-    map_scan(map, use_test_remove_iter, map);
 
     map_remove(map, &(user_t){.name = "User11", .age = 11});
 
-    map_scan(map, user_iter, NULL);
+    timer_start();
+    // check if everything was removed
+    for (size_t i = 0; i < map->cap; i++) {
+        if (map->entries[i] != NULL)
+        {
+            user_iter(map->entries[i], NULL);
+        }
+    }
+    timer_stop();
+    printf("Check all entries if null: %s\n", time_print());
 
-    printf("Count: %zu\n", map_count(map));
-    printf("Cap: %zu\n", map_cap(map));
+    map_destroy(map);
+    free(user);
 }
+
+
 
 int main(void)
 {
 
-    user_test(1024 * 100);
+    user_test(1024 * 1024);
     return 0;
 }

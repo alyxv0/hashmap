@@ -9,4 +9,6 @@ void timer_stop(void);
 
 double timer_time(void);
 
+const char *time_print(void);
+
 #endif

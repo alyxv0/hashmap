@@ -1,5 +1,3 @@
-#include "include/hash.h"
-
 #include <stddef.h>
 #include <inttypes.h>
 
