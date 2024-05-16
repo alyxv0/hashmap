@@ -96,10 +96,15 @@ void user_test(int user_count)
 
     timer_start();
     for (size_t i = 0; i < user_count; i++) {
-        map_set(map, &user[i]);
+        if (map_set(map, &user[i]) == -1) {
+            break;
+        }
     }
+
     timer_stop();
     printf("Set Time: %s\n", timer_print());
+
+    printf("Entries: %zu/%zu\n", map_count(map), map_cap(map));
 
     srand(10);
     int r = range(0, user_count);
@@ -110,7 +115,7 @@ void user_test(int user_count)
     printf("Get User: %s - %s\n", u->name, timer_print());
 
     timer_start();
-    for (size_t i = 0; i < user_count; i++) {
+    for (size_t i = 0; i < map_count(map); i++) {
         u = map_get(map, &user[i]);
         // printf("Get for index [%d]User: %s\n", i, u->name);
     }
@@ -131,6 +136,8 @@ void user_test(int user_count)
     timer_stop();
     printf("Get User: %s - %s\n", ((user_t*)tmp)->name, timer_print());
 
+    printf("map mem: %s\n", byte_units(map->cap * map->usize, -1));
+
 
     timer_start();
     map_foreach(map, use_test_remove_iter, map);
@@ -144,13 +151,14 @@ void user_test(int user_count)
     timer_start();
     // check if everything was removed
     for (size_t i = 0; i < map->cap; i++) {
-        if (map->buckets[i]->entry != NULL)
+        if (map->buckets[i].entry != NULL)
         {
-            user_iter(map->buckets[i]->entry, NULL);
+            user_iter(map->buckets[i].entry, NULL);
         }
     }
     timer_stop();
     printf("Check all entries if null: %s\n", timer_print());
+    printf("map mem: %s\n", byte_units(map->cap * map->usize, -1));
 
     map_destroy(map);
     free(user);
@@ -161,6 +169,6 @@ void user_test(int user_count)
 int main(void)
 {
 
-    user_test(1024);
+    user_test(1024 * 1024 * 100);
     return 0;
 }

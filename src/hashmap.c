@@ -33,7 +33,7 @@ typedef struct map
     size_t count;
     /** array of pointers that hold the data */
     bucket_t *buckets;
-
+    size_t maxcap;
 }  map_t;
 
 int _object_insert(map_t *map, bucket_t *entries, size_t cap, void *unit);
@@ -54,6 +54,12 @@ void map_rehash(map_t *map, bucket_t *entries, size_t new_cap)
 
 int map_realloc(map_t *map)
 {
+    if (map->maxcap != 0) {
+        if (map->cap >= map->maxcap) {
+            return 0;
+        }
+    }
+
     size_t newSize = 0;
     if (map->count >= (size_t)((double)map->cap * DEFAULT_LOAD_FACTOR)) {
         newSize = (size_t)(map->cap * (double)(1 + DEFAULT_LOAD_FACTOR));
@@ -111,6 +117,8 @@ map_t *map_create(size_t unitSize, bool (*compare_cb)(const void *, const void *
     map->usize = unitSize;
     map->compare_cb = compare_cb;
     map->hash_cb = hash_cb;
+    // map->maxcap = GetHigher3mod4Prime(1024 * 1024);
+    map->maxcap = 0;
 
     return map;
 }
@@ -128,8 +136,8 @@ void* map_get(map_t *map, void *unit)
     for (size_t i = 0; i < map->cap; i++) {
         size_t table_index = hash_get_index(hash, i, map->cap);
         
-        printf("map_get: lock\n");
-        pthread_mutex_lock(&map->buckets[table_index].lock);
+        // printf("map_get: lock\n");
+        // pthread_mutex_lock(&map->buckets[table_index].lock);
 
         // printf("%zu\n", table_index);
 
@@ -137,13 +145,13 @@ void* map_get(map_t *map, void *unit)
             continue;
         } else {
             if (map->compare_cb(unit, map->buckets[table_index].entry, NULL) == true) {
-                printf("map_get: found unlock\n");
-                pthread_mutex_unlock(&map->buckets[table_index].lock);
+                // printf("map_get: found unlock\n");
+                // pthread_mutex_unlock(&map->buckets[table_index].lock);
                 return map->buckets[table_index].entry;
             }
         }
-        printf("map_get: unlock\n");
-        pthread_mutex_unlock(&map->buckets[table_index].lock);
+        // printf("map_get: unlock\n");
+        // pthread_mutex_unlock(&map->buckets[table_index].lock);
     }
 
     return NULL;
@@ -153,33 +161,40 @@ int _object_insert(map_t *map, bucket_t *entries, size_t cap, void *unit)
 {
     size_t table_index = 0;
     uint64_t hash = map->hash_cb(unit, NULL);
+ 
+
+    if (map->maxcap != 0) {
+        printf("#################\n");
+        if (map->count == map->cap) {
+            return -1;
+        }
+    }
 
     for (size_t i = 0; i < cap; i++) {
 
         table_index = hash_get_index(hash, i, cap);
 
         // printf("%p\n", entries[table_index]);
-        
-        pthread_mutex_lock(&map->buckets[table_index].lock);
         // printf("%zu: _object_insert: lock\n", i);
-
+        // pthread_mutex_lock(&map->buckets[table_index].lock);
         if (entries[table_index].entry == NULL) {
             entries[table_index].entry = unit;
-            // printf("%zu: _object_insert: unlock\n", i);
-            // pthread_mutex_unlock(&map->buckets[table_index].lock);
-            return table_index;
+            goto GOTO_OBJECT_INSERT_SUCCESS;
         }
 
         if (map->compare_cb(entries[table_index].entry, unit, NULL) == true) {
             entries[table_index].entry = unit;
-            // printf("%zu: _object_insert: unlock\n", i);
-            // pthread_mutex_unlock(&map->buckets[table_index].lock);
-            return table_index;
+            goto GOTO_OBJECT_INSERT_SUCCESS;
         }
         // pthread_mutex_unlock(&map->buckets[table_index].lock);
+        // printf("%zu: _object_insert: unlock\n", i);
     }
 
-    return -1;
+    table_index = -1;
+
+GOTO_OBJECT_INSERT_SUCCESS:
+    // pthread_mutex_unlock(&map->buckets[table_index].lock);
+    return table_index;
 }
 
 int map_set(map_t *map, void *unit)
@@ -189,12 +204,12 @@ int map_set(map_t *map, void *unit)
     size_t index = -1;
 
     if ((index = _object_insert(map, map->buckets, map->cap, unit)) == -1) {
-        fprintf(stderr, "error: failed to insert object\n");
+        // fprintf(stderr, "error: failed to insert object\n");
         return -1;
     }
+    map_realloc(map);
     // printf("index: %zu\n", index);
     map->count++;
-    map_realloc(map);
 
     return 0;
 }
@@ -238,9 +253,9 @@ bool map_foreach(map_t *map, bool (*iter_cb)(const void *, const void *), void *
 
     for (size_t i = 0; i < map->cap; i++) {
         if (map->buckets[i].entry != NULL) {
-            // pthread_mutex_lock(&map->buckets[i].lock);
+            pthread_mutex_lock(&map->buckets[i].lock);
             result = iter_cb(map->buckets[i].entry, udata);
-            // pthread_mutex_unlock(&map->buckets[i].lock);
+            pthread_mutex_unlock(&map->buckets[i].lock);
             if (result == false)
                 break;
         }
@@ -257,4 +272,23 @@ int map_count(map_t *map)
 size_t map_cap(map_t *map)
 {
     return map->cap;
+}
+
+/**
+ * @brief Sets max capacity
+ * 
+ *  returns -1 if current cap is bigger than maxcap
+ * 
+ * @param map map object
+ * @param maxcap max capacity
+ * @return int 
+ */
+int map_maxcap(map_t *map, uint64_t maxcap)
+{
+    map->maxcap = GetHigher3mod4Prime(maxcap);
+
+    if (maxcap < map->cap) {
+        return -1;
+    }
+    return 0;
 }

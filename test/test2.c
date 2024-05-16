@@ -7,6 +7,8 @@
 #include <inttypes.h>
 #include "timing.h"
 
+#include <limits.h>
+
 typedef struct function_info {
     void *func;
     const char *str;
@@ -77,6 +79,11 @@ void fi_test()
     map_foreach(map, fi_iter, NULL);
 
     map_destroy(map);
+
+    printf("%s\n", byte_units(UINT64_MAX, TERABYTE));
+    printf("%s\n", byte_units(UINT64_MAX, -1));
+
+
 }
 
 int main(void)
