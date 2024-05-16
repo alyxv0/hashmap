@@ -124,4 +124,15 @@ size_t map_count(map_t *map);
  */
 size_t map_cap(map_t *map);
 
+/**
+ * @brief Sets max capacity
+ * 
+ *  returns -1 if current cap is bigger than maxcap
+ * 
+ * @param map map object
+ * @param maxcap max capacity
+ * @return int 
+ */
+int map_maxcap(map_t *map, uint64_t maxcap);
+
 #endif

@@ -83,7 +83,6 @@ void fi_test()
     printf("%s\n", byte_units(UINT64_MAX, TERABYTE));
     printf("%s\n", byte_units(UINT64_MAX, -1));
 
-    
 
 }
 
