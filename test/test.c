@@ -144,9 +144,9 @@ void user_test(int user_count)
     timer_start();
     // check if everything was removed
     for (size_t i = 0; i < map->cap; i++) {
-        if (map->buckets[i]->entry != NULL)
+        if (map->buckets[i].entry != NULL)
         {
-            user_iter(map->buckets[i]->entry, NULL);
+            user_iter(map->buckets[i].entry, NULL);
         }
     }
     timer_stop();
@@ -161,6 +161,6 @@ void user_test(int user_count)
 int main(void)
 {
 
-    user_test(1024);
+    user_test(1024 * 1024  * 10);
     return 0;
 }

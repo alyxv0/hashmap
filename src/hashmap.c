@@ -128,8 +128,8 @@ void* map_get(map_t *map, void *unit)
     for (size_t i = 0; i < map->cap; i++) {
         size_t table_index = hash_get_index(hash, i, map->cap);
         
-        printf("map_get: lock\n");
-        pthread_mutex_lock(&map->buckets[table_index].lock);
+        // printf("map_get: lock\n");
+        // pthread_mutex_lock(&map->buckets[table_index].lock);
 
         // printf("%zu\n", table_index);
 
@@ -137,13 +137,13 @@ void* map_get(map_t *map, void *unit)
             continue;
         } else {
             if (map->compare_cb(unit, map->buckets[table_index].entry, NULL) == true) {
-                printf("map_get: found unlock\n");
-                pthread_mutex_unlock(&map->buckets[table_index].lock);
+                // printf("map_get: found unlock\n");
+                // pthread_mutex_unlock(&map->buckets[table_index].lock);
                 return map->buckets[table_index].entry;
             }
         }
-        printf("map_get: unlock\n");
-        pthread_mutex_unlock(&map->buckets[table_index].lock);
+        // printf("map_get: unlock\n");
+        // pthread_mutex_unlock(&map->buckets[table_index].lock);
     }
 
     return NULL;
@@ -159,26 +159,26 @@ int _object_insert(map_t *map, bucket_t *entries, size_t cap, void *unit)
         table_index = hash_get_index(hash, i, cap);
 
         // printf("%p\n", entries[table_index]);
-        pthread_mutex_lock(&map->buckets[table_index].lock);
-        printf("%zu: _object_insert: lock\n", i);
-
+        // printf("%zu: _object_insert: lock\n", i);
+        // pthread_mutex_lock(&map->buckets[table_index].lock);
         if (entries[table_index].entry == NULL) {
             entries[table_index].entry = unit;
-            printf("%zu: _object_insert: unlock\n", i);
-            pthread_mutex_unlock(&map->buckets[table_index].lock);
-            return table_index;
+            goto GOTO_OBJECT_INSERT_SUCCESS;
         }
 
         if (map->compare_cb(entries[table_index].entry, unit, NULL) == true) {
             entries[table_index].entry = unit;
-            printf("%zu: _object_insert: unlock\n", i);
-            pthread_mutex_unlock(&map->buckets[table_index].lock);
-            return table_index;
+            goto GOTO_OBJECT_INSERT_SUCCESS;
         }
-        pthread_mutex_unlock(&map->buckets[table_index].lock);
+        // pthread_mutex_unlock(&map->buckets[table_index].lock);
+        // printf("%zu: _object_insert: unlock\n", i);
     }
 
-    return -1;
+    table_index = -1;
+
+    GOTO_OBJECT_INSERT_SUCCESS:
+    // pthread_mutex_unlock(&map->buckets[table_index].lock);
+    return table_index;
 }
 
 int map_set(map_t *map, void *unit)

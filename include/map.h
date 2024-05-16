@@ -29,7 +29,7 @@ typedef struct map
     /** number of entries */
     size_t count;
     /** array of pointers that hold the data */
-    bucket_t **buckets;
+    bucket_t *buckets;
 
 }  map_t;
 
