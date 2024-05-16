@@ -63,6 +63,7 @@ bool use_test_remove_iter(const void *item, void *udata)
 
     return true;
 }
+user_t user = {};
 
 void user_test(int user_count)
 {
@@ -73,30 +74,17 @@ void user_test(int user_count)
         fprintf(stderr, "error: (to implement)");
         abort();
     }
-    user_t *user = calloc(user_count, sizeof *user);
-    if (user == NULL)
-    {
-        fprintf(stderr, "error: memory error\n");
-        abort();
-    }
+    printf("Map mem: %s\n", byte_units(user_count * map->usize * 2, -1));
 
     timer_start();
     for (size_t i = 0; i < user_count; i++) {
-        int ret = snprintf(user[i].name, sizeof(user[i].name), "User%zu", i);
+        int ret = snprintf(user.name, sizeof(user.name), "User%zu", i);
         if (ret < 0)
         {
             abort();
         }
-        user[i].age = i;
-
-        // printf("i: %zu, name: %s\n", i, user[i].name);
-    }
-    timer_stop();
-    printf("Create Users Time: %s\n", timer_print());
-
-    timer_start();
-    for (size_t i = 0; i < user_count; i++) {
-        if (map_set(map, &user[i]) == -1) {
+        user.age = i;
+        if (map_set(map, &user) == -1) {
             break;
         }
     }
@@ -110,13 +98,25 @@ void user_test(int user_count)
     int r = range(0, user_count);
 
     timer_start();
-    user_t *u = map_get(map, &user[r]);
+    int ret = snprintf(user.name, sizeof(user.name), "User%zu", r);
+        if (ret < 0)
+        {
+            abort();
+        }
+    user.age = r;
+    user_t *u = map_get(map, &user);
     timer_stop();
     printf("Get User: %s - %s\n", u->name, timer_print());
 
     timer_start();
     for (size_t i = 0; i < map_count(map); i++) {
-        u = map_get(map, &user[i]);
+        int ret = snprintf(user.name, sizeof(user.name), "User%zu", i);
+        if (ret < 0)
+        {
+            abort();
+        }
+        user.age = i;
+        u = map_get(map, &user);
         // printf("Get for index [%d]User: %s\n", i, u->name);
     }
     timer_stop();
@@ -127,7 +127,14 @@ void user_test(int user_count)
 
 
     timer_start();
-    void *tmp = map_get(map, &(user_t){.name = "User0", .age = 0});
+    ret = snprintf(user.name, sizeof(user.name), "User%zu", 0);
+        if (ret < 0)
+        {
+            abort();
+        }
+        user.age = 0;
+
+    void *tmp = map_get(map, &user);
     timer_stop();
     printf("Get User: %s - %s\n",((user_t*)tmp)->name, timer_print());
     
@@ -161,7 +168,6 @@ void user_test(int user_count)
     printf("map mem: %s\n", byte_units(map->cap * map->usize, -1));
 
     map_destroy(map);
-    free(user);
 }
 
 
@@ -169,6 +175,6 @@ void user_test(int user_count)
 int main(void)
 {
 
-    user_test(1024 * 1024 * 100);
+    user_test(1024 * 1024);
     return 0;
 }
